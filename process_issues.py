@@ -36,6 +36,7 @@ for num in manifest["issues"]:
         lean["method"] = m.group(2)
         lean["builds"] = []
         lean["state"] = issue["state"]
+        lean["title"] = issue["title"]
         lean["createdAt"] = timestamp(issue["createdAt"])
         lean["updatedAt"] = timestamp(issue["updatedAt"])
         for content in content_gen(issue):

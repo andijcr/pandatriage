@@ -38,6 +38,10 @@ def should_reopen(failure):
 def no_ci(failure):
     return len(failure["issues"]) == 0
 
+def active_issue(failure):
+    open = [x for x in failure["issues"] if x["state"] == "OPEN"]
+    return sorted(open, key=lambda x: x["updatedAt"], reverse=True)[0]
+
 def is_stale_issue(failure):
     if len(failure["issues"]) == 0:
         return False
@@ -65,6 +69,10 @@ for id in manifest["failures"]:
 
     collection = None
 
+    entry = {
+        "title": failure["fails"][0]["title"].replace("\r", "").split("\n")[0][0:70]
+    }
+
     if is_stale_issue(failure):
         collection = stale_issues
     elif is_stale_failure(failure):
@@ -76,12 +84,19 @@ for id in manifest["failures"]:
     elif no_ci(failure):
         collection = noci
     else:
+        issue = active_issue(failure)
+        entry = {
+            "issue": issue["number"],
+            "title": issue["title"][0:70],
+            "freq": int(1000000 * len(failure["fails"]) / (len(failure["fails"]) + failure["test"]["passes"]))
+        }
         collection = active
-    
-    collection.append({
+        
+    collection.append(entry | {
         "name": failure["name"],
         "fails": len(failure["fails"]),
         "passes": failure["test"]["passes"],
+        "runs": failure["test"]["runs"],
         "first": min(map(lambda x: x["ts"], failure["fails"])),
         "last": max(map(lambda x: x["ts"], failure["fails"]))
     })

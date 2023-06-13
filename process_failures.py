@@ -29,6 +29,7 @@ for id in manifest["failures"]:
             if fail["link"] in issue["builds"]:
                 tickets.append({
                     "state": issue["state"],
+                    "title": issue["title"],
                     "createdAt": issue["createdAt"],
                     "updatedAt": issue["updatedAt"],
                     "number": issue["number"],
