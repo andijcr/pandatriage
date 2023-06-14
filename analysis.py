@@ -42,6 +42,9 @@ def active_issue(failure):
     open = [x for x in failure["issues"] if x["state"] == "OPEN"]
     return sorted(open, key=lambda x: x["updatedAt"], reverse=True)[0]
 
+def last_issue(failure):
+    return sorted(failure["issues"], key=lambda x: x["updatedAt"], reverse=True)[0]
+
 def is_stale_issue(failure):
     if len(failure["issues"]) == 0:
         return False
@@ -80,6 +83,12 @@ for id in manifest["failures"]:
     elif is_closed(failure):
         collection = closed
     elif should_reopen(failure):
+        issue = last_issue(failure)
+        entry = {
+            "issue": issue["number"],
+            "title": issue["title"][0:70],
+            "freq": int(1000000 * len(failure["fails"]) / (len(failure["fails"]) + failure["test"]["passes"]))
+        }
         collection = reopen
     elif no_ci(failure):
         collection = noci

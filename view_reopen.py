@@ -11,4 +11,4 @@ should_open = sorted(analysis["should_reopen"], key=lambda x: x["last"], reverse
 
 for item in should_open:
     day = datetime.fromtimestamp(item["last"]).strftime("%Y-%m-%d")
-    print(f"{item['name']}\t{day}\t{item['fails']}\t{item['passes']}")
+    print(f"{item['issue']}\t{item['freq']}\t{item['fails']}\t{day}\t{item['title']}")
