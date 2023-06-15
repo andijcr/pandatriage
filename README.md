@@ -1,4 +1,3 @@
-
 ## Configuration
 
 Set CI DB credentials (environment variables):
@@ -21,30 +20,11 @@ Use gh to set its credentials
 Correlate issues & failures
 
 ```
-# create dirs
-mkdir -p builds failures issues workspace
-
-# fetch the database and store it locally in `builds` as json files
-# follow up execution will fetch only the delta
-python3 fetch_builds.py
-
-# fetch all ci-issues open and closed and store it locally in `issues`
-NO_COLOR=1 python3 fetch_issues.py
-
-# group all test failures by (test name, stacktrace) + trivial key word heuristic
-# and store them in `failures`; ideally there is 1:1 mapping between failures and
-# issues
-python3 process_builds.py
-
-# extract essential info from issues: class, method, creation & modification time,
-# state and links to failing builds
-python3 process_issues.py
-
-# correlate failures with issues and enrich failure with issue info
-python3 process_failures.py
-
-# classify failures into: active, new, should reopen issue, stale failure
-python3 analysis.py
+# scripts
+#  - downloads failures from Redpanda Test Results DB
+#  - downloads issues
+#  - correlates and analyzes them
+NO_COLOR=1 python3 index.py
 ```
 
 ### New failures
@@ -57,74 +37,89 @@ python3 view_new.py
 Output
 
 ```
-485     2023-06-12      1       7288
-484     2023-06-12      1       5292
-483     2023-06-12      1       5286
-480     2023-06-11      2       5307
+f-id    build   freq    total   first occ.      title
+491     #31233  628     1       2023-06-14      <NodeCrash (docker-rp-21,docker-rp-8) docker-rp-21: Redpanda process u
+490     #31229  2223    24      2023-06-14      AttributeError("'NoneType' object has no attribute 'account'")
+489     #31229  321     1       2023-06-14      TimeoutError()
+487     #31184  184     1       2023-06-13      <NodeCrash docker-rp-16: ERROR 2023-06-13 15:22:08,202 [shard 1] asser
+484     #31103  185     1       2023-06-12      <NodeCrash docker-rp-13: ERROR 2023-06-12 17:28:55,404 [shard 0] asser
 ...
-202     2023-02-23      3       8966
-142     2023-01-27      9       5329
-124     2023-01-10      2       10673
+202     #23852  326     3       2023-02-23      HTTPError('504 Server Error: Gateway Timeout for url: http://docker-rp
+9       #21947  1652    9       2023-01-27      TimeoutError('Redpanda service docker-rp-10 failed to start within 60 
+40      #20893  183     2       2023-01-10      TimeoutError("Consumer failed to consume up to offsets {TopicPartition
 ```
 
 Legend
 
 ```
-485        - id of a failure, check `failures/485.json`
-2023-06-12 - first occurrence of a failure
-1          - number of failures
-7288       - number of passes
+f-id       - id of a failure, check `failures/491.json`
+build      - buildkite's build, check https://buildkite.com/redpanda/redpanda/builds/31233
+freq       - frequency of the fails (number of failures per 1MM)
+total      - total number of fails
+first occ. - first occurrence of the failure
+title      - failure's title (to ignore: python3 view_new.py --notitle)
+test       - failing test (to include: python3 view_new.py --test)
 ```
 
-### Resurrection of closed issue
+Sometime a rogue ci build causes a lot of errors which may be ignored (e.g. a responsible PR is identified and rolled back). In this case edit `.ciignore.json` to exclude that build, reset `last-processed-id` to `-1` in `data/builds/manifest.json` and restart `index.py`.
+
+### Come back of old resolved issues
 
 ```
 # list failures which keep happening after an issue is closed
-python3 view_reopen.py
+python3 view_issues.py --type reopen
 ```
 
 Output
 
 ```
-164     2023-06-12      6       5326
-153     2023-06-12      26      17923
+f-id    issue   freq    total   last occ.       title
+311     #10087  1027    10      2023-05-02      CI Failure (connection refused to admin API) in `EndToEndShadowIndexin
+240     #7418   2938    32      2023-05-31      CI Failure (partitions_rebalanced times out) in `ScalingUpTest`.`test_
+238     #9459   370     2       2023-06-14      CI Failure target_offset <= _insync_offset in `PartitionBalancerTest.t
 ...
-311     2023-05-02      10      9518
-123     2023-04-15      19      17923
+57      #8919   1146    21      2023-06-14      CI Failure (Assertion `_state && !_state->available()' failed) in `Ran
+33      #8220   1101    6       2023-05-04      Disk usage ratio check failing in `PartitionBalancerTest`.`test_full_n
+1       #8421   1285    7       2023-06-02      CI Failure (heap-use-after-free) in `AvailabilityTests.test_availabili
 ```
 
-Legend
+### Top failing issues
 
 ```
-164        - id of a failure, check `failures/164.json`
-2023-06-12 - last occurance of a failure
-6          - number of failures
-5326       - number of passes
-```
-
-### Top active failures
-
-```
-python3 view_active_top.py
+python3 view_issues.py --type top
 ```
 
 Output
 
 ```
-3       87      10582   2023-06-12
-429     87      1941    2023-06-13
-370     76      7197    2023-06-13
+f-id    issue   freq    total   last occ.       title
+464     #11306  191588  41      2023-06-14      CI Failure (Consumed from an unexpected) in `SimpleEndToEndTest.test_c
+429     #11044  56807   121     2023-06-15      CI Failure (Timeout - Failed to start) in `MultiTopicAutomaticLeadersh
+362     #10849  47368   45      2023-05-18      CI Failure (timeout waiting for `rpk cluster` to list 1 topic) in `Sha
+448     #11151  22666   17      2023-06-02      CI Failure (TimeoutError) in `CloudStorageChunkReadTest.test_read_when
+224     #10873  16984   49      2023-05-21      CI Failure (Reported cloud storage usage did not match the manifest in
 ...
-476     1       5286    2023-06-10
-478     1       5337    2023-06-11
-482     1       105253  2023-06-12
+329     #10368  51      1       2023-04-22      CI Failure (topic does not exist while deleting topic) in `ShadowIndex
+412     #10935  45      1       2023-05-19      CI Failure (Internal Server Error) in `PartitionBalancerTest.test_deco
+428     #11410  42      1       2023-05-25      CI Failure (consumers haven't finished) in `CompactionE2EIdempotencyTe
+482     #11371  9       1       2023-06-12      CI Failure (Redpanda failed to stop in 30 seconds) in `PartitionMoveIn
 ```
 
-Legend
+### First occurrence of a failure
+
+The command is usefull to chase a PR causing the problem.
 
 ```
-3          - id of a failure, check `failures/3.json`
-87         - number of failures
-2023-06-12 - last occurance of a failure
-10582      - number of passes
+python3 view_issues.py --type first
+```
+
+```
+f-id    issue   freq    total   first occ.      title
+486     #11151  1362    1       2023-06-13      CI Failure (TimeoutError) in `CloudStorageChunkReadTest.test_read_when
+485     #11365  666     5       2023-06-12      CI Failure (Timeout waiting for partitions to move) in `NodesDecommiss
+482     #11371  9       1       2023-06-12      CI Failure (Redpanda failed to stop in 30 seconds) in `PartitionMoveIn
+...
+60      #10218  739     4       2022-12-21      CI Failure (ignored exceptional future) in `PartitionBalancerTest.test
+80      #10024  2205    24      2022-12-14      CI Failure (TimeoutError in wait_for_partitions_rebalanced) in `Scalin
+78      #11062  551     6       2022-12-13      CI Failure (startup failure) in `ScalingUpTest.test_adding_multiple_no
 ```

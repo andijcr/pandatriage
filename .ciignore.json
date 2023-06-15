@@ -1,0 +1,22 @@
+[
+    {
+        "build": 31248,
+        "comment": "https://github.com/redpanda-data/redpanda/pull/11423"
+    },
+    {
+        "build": 31258,
+        "comment": "https://github.com/redpanda-data/redpanda/pull/11423"
+    },
+    {
+        "build": 31256,
+        "comment": "https://github.com/redpanda-data/redpanda/pull/11423"
+    },
+    {
+        "build": 31253,
+        "comment": "https://github.com/redpanda-data/redpanda/pull/11423"
+    },
+    {
+        "build": 31251,
+        "comment": "https://github.com/redpanda-data/redpanda/pull/11423"
+    }
+]

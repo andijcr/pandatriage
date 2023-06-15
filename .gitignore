@@ -1,6 +1,4 @@
 credentials.sh
 
-builds/
-failures/
-issues/
-workspace/
+data/
+__pycache__/

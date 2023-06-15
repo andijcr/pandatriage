@@ -1,14 +1,30 @@
-import json
+import argparse
 from datetime import datetime
+from index import load_json
 
-def load_json(name, folder="workspace"):
-    with open(f"{folder}/{name}.json", "r") as f:
-        return json.load(f)
+parser = argparse.ArgumentParser()
+parser.add_argument('--notitle', action="store_false", required=False)
+parser.add_argument('--test', action="store_true", required=False)
+args = parser.parse_args()
 
-analysis = load_json("ci-analysis")
+analysis = load_json("data/analysis")
 
-should_open = sorted(analysis["should_open"], key=lambda x: x["first"], reverse=True)
+occurrence = "last"
 
-for item in should_open:
+failures = sorted(analysis["should_open"], key=lambda x: x["first"], reverse=True)
+
+legend = f"f-id\tbuild\tfreq\ttotal\tfirst occ."
+if args.test:
+    legend = f"{legend}\ttest"
+if args.notitle:
+    legend = f"{legend}\ttitle"
+print(legend)
+
+for item in failures:
     day = datetime.fromtimestamp(item["first"]).strftime("%Y-%m-%d")
-    print(f"{item['name']}\t{day}\t{item['fails']}\t{item['passes']}")
+    line = f"{item['name']}\t#{item['link_id']}\t{item['freq']}\t{item['fails']}\t{day}"
+    if args.test:
+        line = f"{line}\t{item['test_id']}"
+    if args.notitle:
+        line = f"{line}\t{item['title']}"
+    print(line)
