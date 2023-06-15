@@ -4,6 +4,7 @@ import json
 import os.path
 import os
 import time
+import shutil
 from sh import gh
 from datetime import datetime
 from collections import defaultdict
@@ -49,6 +50,8 @@ def main():
     os.makedirs("data/builds", exist_ok=True)
     os.makedirs("data/failures", exist_ok=True)
     os.makedirs("data/issues", exist_ok=True)
+    shutil.rmtree("data/open", ignore_errors=True)
+    os.makedirs("data/open", exist_ok=True)
     
     fetch_ci_runs()
     fetch_ci_issues()
@@ -277,6 +280,11 @@ def process_ci_runs():
                         "test_id": test_id,
                         "id": id,
                         "stacktrace": test_run["summary"],
+                        "run_time_seconds": test_run["run_time_seconds"],
+                        "module_name": test_run["module_name"],
+                        "cls_name": test_run["cls_name"],
+                        "function_name": test_run["function_name"],
+                        "injected_args": test_run["injected_args"],
                         "signature": signature,
                         "fails": []
                     }
@@ -492,6 +500,28 @@ def analyze():
             }
             collection = reopen
         elif should_open(failure):
+            c = f"CI Failure (key symptom) in `{failure['cls_name']}.{failure['module_name']}`\n" +\
+                "\n" +\
+                "\n".join(map(lambda x: x["link"], failure["fails"])) + "\n" +\
+                "\n" +\
+                "```\n" +\
+                f"Module: {failure['module_name']}\n" +\
+                f"Class: {failure['cls_name']}\n" +\
+                f"Method: {failure['function_name']}\n" +\
+                (f"Arguments: {json.dumps(failure['injected_args'], indent=4)}\n" if failure['injected_args'] != None else "") +\
+                "```\n" +\
+                "\n" +\
+                "```\n" +\
+                f"test_id:    {failure['test_id']}\n" +\
+                f"status:     FAIL\n" +\
+                f"run time:   {failure['run_time_seconds']:.3f} seconds\n" +\
+                "\n" +\
+                f"{failure['stacktrace']}" +\
+                "```\n"
+            
+            with open(f"data/open/{id}.md", "w") as f:
+                f.write(c)
+
             entry["link_id"] = int(re.match(".+/([0-9]+)$", first_fail(failure)["link"]).group(1))
             entry["test_id"] = failure["test_id"]
             collection = noci
