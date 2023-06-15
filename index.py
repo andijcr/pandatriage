@@ -76,7 +76,7 @@ def fetch_ci_runs():
         manifest = {
             "builds": [],
             "last-fetched-id": -1,
-            "last_processed-id": -1
+            "last-processed-id": -1
         }
 
     print("Fetching a list of recent ci-runs")
@@ -102,16 +102,25 @@ def fetch_ci_runs():
         for record in records:
             fetched += 1
 
-            m = re_build_arch.match(record[2])
-            if not m:
-                assert False
+            build = "release"
+            arch = "amd64"
+            type = "cdt"
+
+            if record[2] != "cdt":
+                m = re_build_arch.match(record[2])
+                if not m:
+                    assert False
+                build = m.group(1)
+                arch = m.group(2)
+                type = "pr-merged"
         
             build = {
                 "id": record[0],
                 "day": record[1].strftime("%Y-%m-%d"),
                 "ts": record[1].timestamp(),
-                "build": m.group(1),
-                "arch": m.group(2),
+                "build": build,
+                "arch": arch,
+                "type": type,
                 "name": record[2],
                 "data": record[3],
                 "meta": record[4]
@@ -293,6 +302,7 @@ def process_ci_runs():
                     "title": title,
                     "id": id,
                     "ts": build["ts"],
+                    "type": build["type"],
                     "build": build["build"],
                     "arch": build["arch"],
                     "link": build["meta"]["buildkite_env_vars"]["BUILDKITE_BUILD_URL"]

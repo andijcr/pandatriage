@@ -10,7 +10,7 @@ Search for "Redpanda Test Results DB" on wiki
 
 ### Dependencies
 
-* `pip3 install sh`
+* `pip3 install sh psycopg2`
 * install [gh](https://cli.github.com/)
 
 ## Usage
