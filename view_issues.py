@@ -5,7 +5,7 @@ from index import load_json
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--type', choices=["top", "recent", "first", "reopen"], default="top", required=False)
+parser.add_argument('--type', choices=["top", "recent", "first", "reopen", "stale"], default="top", required=False)
 args = parser.parse_args()
 
 analysis = load_json("data/analysis")
@@ -22,6 +22,8 @@ if args.type == "first":
     issues = sorted(analysis["active"], key=lambda x: x["first"], reverse=True)
 if args.type == "reopen":
     issues = sorted(analysis["should_reopen"], key=lambda x: x["first"], reverse=True)
+if args.type == "stale":
+    issues = sorted(analysis["stale_issues"], key=lambda x: x["last"], reverse=True)
 
 print(f"f-id\tissue\tfreq\ttotal\t{occurrence} occ.\ttitle")
 
