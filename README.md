@@ -13,17 +13,14 @@ Search for "Redpanda Test Results DB" on wiki
 * `pip3 install sh psycopg2`
 * install [gh](https://cli.github.com/)
 
-## Usage
-
 Use gh to set its credentials
 
-Correlate issues & failures
+## Usage
+
+Correlate issues with failures. The first run takes ~30 mins because it downloads Redpanda Test Results DB
+and gh issues locally from scratch. The follow up will fetch only delta.
 
 ```
-# scripts
-#  - downloads failures from Redpanda Test Results DB
-#  - downloads issues
-#  - correlates and analyzes them
 NO_COLOR=1 python3 index.py
 ```
 
@@ -122,4 +119,36 @@ f-id    issue   freq    total   first occ.      title
 60      #10218  739     4       2022-12-21      CI Failure (ignored exceptional future) in `PartitionBalancerTest.test
 80      #10024  2205    24      2022-12-14      CI Failure (TimeoutError in wait_for_partitions_rebalanced) in `Scalin
 78      #11062  551     6       2022-12-13      CI Failure (startup failure) in `ScalingUpTest.test_adding_multiple_no
+```
+
+### Last occurrence of a failure
+
+```
+python3 view_issues.py --type recent
+```
+
+```
+f-id    issue   freq    total   last occ.       title
+485     #11365  925     7       2023-06-15      CI Failure (Timeout waiting for partitions to move) in `NodesDecommiss
+429     #11044  61167   132     2023-06-15      CI Failure (Timeout - Failed to start) in `MultiTopicAutomaticLeadersh
+490     #11456  2489    27      2023-06-15      CI Failure (`AttributeError: 'NoneType' object has no attribute 'accou
+...
+305     #10363  628     3       2023-05-04      CI Failure (assertion error: groups not reported after migration) in `
+60      #10218  735     4       2023-05-04      CI Failure (ignored exceptional future) in `PartitionBalancerTest.test
+329     #10368  51      1       2023-04-22      CI Failure (topic does not exist while deleting topic) in `ShadowIndex
+```
+
+### Stale issues
+
+A failure associated with the issues hasn't failed within two months
+
+```
+python3 view_issues.py --type stale
+```
+
+```
+f-id    issue   freq    total   last occ.       title
+15      #8496   933     4       2023-04-12      CI Failure (_topic_remote_deleted timeout) in `TopicDeleteCloudStorage
+223     #9751   204     4       2023-04-05      CI Failure (timeout + UNKNOWN_TOPIC_OR_PARTITION) in `EndToEndTopicRec
+4       #8457   206     5       2023-03-07      CI Failure (Timeout on manifest_has_one_segment) in `AdjacentSegmentMe
 ```
