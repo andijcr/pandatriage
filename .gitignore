@@ -2,3 +2,7 @@ credentials.sh
 
 data/
 __pycache__/
+
+# common venv folder names
+/venv
+/.venv
