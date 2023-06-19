@@ -10,8 +10,29 @@ Search for "Redpanda Test Results DB" on wiki
 
 ### Dependencies
 
-* `pip3 install sh psycopg2`
-* install [gh](https://cli.github.com/)
+Install [gh](https://cli.github.com/) CLI binary.
+
+Then choose venv or global install for python modules, with venv recommended.
+
+#### venv
+
+Using `venv` is the easiest way to set up the dependencies independently of the rest of your system.
+
+One time setup (should show `venv setup OK` as the last line of output):
+
+```bash
+python3 -m venv venv && source venv/bin/activate && pip3 install -r requirements.txt && echo "venv setup OK"
+```
+
+When you return to use the tool in a new tty, you need to activate the venv:
+
+```bash
+source venv/bin/activate
+```
+
+#### Global install
+
+* `pip3 install -r requirements.txt`
 
 Use gh to set its credentials
 
@@ -42,7 +63,7 @@ f-id    build   freq    total   first occ.      title
 484     #31103  185     1       2023-06-12      <NodeCrash docker-rp-13: ERROR 2023-06-12 17:28:55,404 [shard 0] asser
 ...
 202     #23852  326     3       2023-02-23      HTTPError('504 Server Error: Gateway Timeout for url: http://docker-rp
-9       #21947  1652    9       2023-01-27      TimeoutError('Redpanda service docker-rp-10 failed to start within 60 
+9       #21947  1652    9       2023-01-27      TimeoutError('Redpanda service docker-rp-10 failed to start within 60
 40      #20893  183     2       2023-01-10      TimeoutError("Consumer failed to consume up to offsets {TopicPartition
 ```
 
