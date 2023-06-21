@@ -60,6 +60,10 @@ error_classes = {
 }
 
 def main():
+
+    # because otherwise g() returns results with ASCII escape codes to colorize
+    os.environ['NO_COLOR'] = '1' 
+
     os.makedirs("data/builds", exist_ok=True)
     os.makedirs("data/failures", exist_ok=True)
     os.makedirs("data/issues", exist_ok=True)
