@@ -1,4 +1,3 @@
-import json
 import sys
 from index import load_json
 

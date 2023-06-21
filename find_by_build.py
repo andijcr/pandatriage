@@ -1,15 +1,12 @@
-import json
 import sys
+from index import load_json
 
-def load_json(name, folder="failures"):
-    with open(f"{folder}/{name}.json", "r") as f:
-        return json.load(f)
-
-manifest = load_json("manifest")
+manifest = load_json("data/failures/manifest")
 
 for id in manifest["failures"]:
-    failure = load_json(id)
+    failure = load_json(f"data/failures/{id}")
 
     for fail in failure["fails"]:
         if fail["link"] == sys.argv[1]:
-            print(id)
+            print(f"{id} {failure['test_id']}")
+            break
