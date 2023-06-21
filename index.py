@@ -379,7 +379,11 @@ def process_ci_issues():
 
     for test_id in issues:
         for i in range(0, len(issues[test_id])):
+            if issues[test_id][i]["state"] != "OPEN":
+                continue
             for j in range(i+1, len(issues[test_id])):
+                if issues[test_id][j]["state"] != "OPEN":
+                    continue
                 for link in issues[test_id][i]["builds"]:
                     if link in issues[test_id][j]["builds"]:
                         open_conflicts[issues[test_id][i]["number"]][issues[test_id][j]["number"]].append(link)
