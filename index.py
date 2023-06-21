@@ -9,10 +9,17 @@ from sh import gh
 from datetime import datetime
 from collections import defaultdict
 
-host = os.getenv("CI_DB_HOST")
+def getenv(key: str):
+    v = os.getenv(key)
+    if not v:
+        raise RuntimeError(f'You must set {key} in the environment before running {os.path.basename(__file__)}')
+    return v
+
+host = getenv("CI_DB_HOST")
 database = "perfregressiondb"
-user = os.getenv("CI_DB_USER")
-password = os.getenv("CI_DB_PWD")
+user = getenv("CI_DB_USER")
+password = getenv("CI_DB_PWD")
+
 
 re_build_arch = re.compile("summary-ducktape-build-([a-z]+)-clang-([a-z0-9]+)-0")
 
