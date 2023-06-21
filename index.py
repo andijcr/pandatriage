@@ -155,7 +155,7 @@ def fetch_ci_issues():
     fetch_list = set()
 
     for status in ["open", "closed"]:
-        issues = gh("issue", "list", "-R", "redpanda-data/redpanda", "-l", "ci-failure", "-L", "10000", "-s", status, "--json", "number,updatedAt")
+        issues = gh("issue", "list", "-R", "redpanda-data/redpanda", "-L", "10000", "-s", status, "--json", "number,updatedAt", "--search", "label:ci-failure -label:rpunit -label:ci-ignore")
 
         for issue in json.loads(str(issues)):
             num = issue["number"]
