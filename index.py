@@ -531,7 +531,7 @@ def analyze():
             }
             collection = reopen
         elif should_open(failure):
-            c = f"CI Failure (key symptom) in `{failure['cls_name']}.{failure['module_name']}`\n" +\
+            c = f"CI Failure (key symptom) in `{failure['cls_name']}.{failure['function_name']}`\n" +\
                 "\n" +\
                 "\n".join(map(lambda x: x["link"], failure["fails"])) + "\n" +\
                 "\n" +\
