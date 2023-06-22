@@ -387,7 +387,10 @@ def process_ci_issues():
             lean["updatedAt"] = timestamp(issue["updatedAt"])
             lean["labels"] = list(map(lambda x: x["name"], issue["labels"]))
             for content in content_gen(issue):
-                for x in re.findall("(https://buildkite.com/redpanda/redpanda/builds/\d+)#[0-9a-z]{8}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{12}", content):
+                # for now we don't require a fragment, since issues created by this tool lack them, 
+                # regex for fragment was:
+                # #[0-9a-z]{8}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{12}
+                for x in re.findall("(https://buildkite.com/redpanda/redpanda/builds/\d+)", content):
                     if x not in lean["builds"]:
                         lean["builds"].append(x)
             skinny.append(lean)
