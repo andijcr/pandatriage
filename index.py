@@ -8,6 +8,7 @@ import shutil
 from sh import gh
 from datetime import datetime
 from collections import defaultdict
+import argparse
 
 def getenv(key: str):
     v = os.getenv(key)
@@ -76,10 +77,14 @@ def main():
     os.makedirs("data/issues", exist_ok=True)
     shutil.rmtree("data/open", ignore_errors=True)
     os.makedirs("data/open", exist_ok=True)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--reindex', action='store_true', required=False)
+    args = parser.parse_args()
     
     fetch_ci_runs()
     fetch_ci_issues()
-    process_ci_runs()
+    process_ci_runs(args.reindex)
     process_ci_issues()
     process_test_failures()
     analyze()
@@ -256,7 +261,7 @@ def get_signature(test_run):
         result += item + "\n"
     return result, title
 
-def process_ci_runs():
+def process_ci_runs(reindex):
     ciignore = {}
     if os.path.exists(".ciignore.json"):
         for item in load_json(".ciignore"):
@@ -264,7 +269,7 @@ def process_ci_runs():
     
     manifest = load_json("data/builds/manifest")
 
-    if manifest["last-processed-id"] == manifest["last-fetched-id"]:
+    if not(reindex) and manifest["last-processed-id"] == manifest["last-fetched-id"]:
         print("All ci runs are processed")
         return
 

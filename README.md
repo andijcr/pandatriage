@@ -42,8 +42,11 @@ Correlate issues with failures. The first run takes ~30 mins because it download
 and gh issues locally from scratch. The follow up will fetch only delta.
 
 ```
-NO_COLOR=1 python3 index.py
+python3 index.py
 ```
+
+When you already used the tool and pull new version you should either `rm -rf data` or use `python3 index.py --reindex`.
+The latter is faster because it doesn't download the test db again and only reprocess it.
 
 ### New failures
 
