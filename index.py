@@ -34,6 +34,13 @@ ignored_stacktrace_prefixes = [
         "runner_client.py:run_test",
         "mode_checks.py:f",
         "cluster.py:wrapped"
+    ],
+    [
+        "runner_client.py:run",
+        "runner_client.py:run_test",
+        "_mark.py:wrapper",
+        "mode_checks.py:f",
+        "cluster.py:wrapped"
     ]
 ]
 
