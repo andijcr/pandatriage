@@ -198,7 +198,7 @@ def fetch_ci_issues():
     i = 0
     for num in fetch_list:
         started = time.time()
-        issue = gh("issue", "view", "-R", "redpanda-data/redpanda", num, "--json", "number,title,body,comments,createdAt,updatedAt,state,comments")
+        issue = gh("issue", "view", "-R", "redpanda-data/redpanda", num, "--json", "number,title,body,comments,createdAt,updatedAt,state,comments,labels")
         issue = json.loads(str(issue))
 
         if num not in manifest["issues"]:
@@ -385,6 +385,7 @@ def process_ci_issues():
             lean["title"] = issue["title"]
             lean["createdAt"] = timestamp(issue["createdAt"])
             lean["updatedAt"] = timestamp(issue["updatedAt"])
+            lean["labels"] = list(map(lambda x: x["name"], issue["labels"]))
             for content in content_gen(issue):
                 for x in re.findall("(https://buildkite.com/redpanda/redpanda/builds/\d+)#[0-9a-z]{8}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{12}", content):
                     if x not in lean["builds"]:
@@ -442,7 +443,8 @@ def process_test_failures():
                         "createdAt": issue["createdAt"],
                         "updatedAt": issue["updatedAt"],
                         "number": issue["number"],
-                        "link": fail["link"]
+                        "link": fail["link"],
+                        "labels": issue["labels"],
                     })
         failure["issues"] = tickets
         save_json(f"data/failures/{id}", failure)
@@ -493,10 +495,14 @@ def analyze():
             return False
         if all(map(lambda x: x["state"]=="CLOSED", failure["issues"])):
             return False
+        if any(map(lambda x: x["state"]=="OPEN" and "ci-disabled-test" in x["labels"], failure["issues"])):
+            return False
         occurence = max(map(lambda x: x["ts"], failure["fails"]))
         return occurence + 2*30*24*60*60 < time.time()
 
     def is_stale_failure(failure):
+        if len(failure["issues"]) != 0:
+            return False
         occurence = max(map(lambda x: x["ts"], failure["fails"]))
         return occurence + 2*30*24*60*60 < time.time()
     
