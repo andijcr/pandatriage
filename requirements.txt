@@ -1,2 +1,3 @@
 psycopg2-binary==2.9.6
 sh==2.0.4
+csvkit==1.1.1

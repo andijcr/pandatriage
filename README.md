@@ -52,22 +52,21 @@ it fails then wipe the whole state out `rm -rf data` and start from scratch `pyt
 
 ```
 # list failures which doesn't have corresponding issues
-python3 view_new.py
+python3 view_new.py | csvcut -c "failure id","build","freq","total","first occ.","test","title" | csvlook -q '"' -d "," | less -S
 ```
+
+By tuning the csvcut's args you may control which columns to display.
 
 Output
 
 ```
-f-id    build   freq    total   first occ.      title
-491     #31233  628     1       2023-06-14      <NodeCrash (docker-rp-21,docker-rp-8) docker-rp-21: Redpanda process u
-490     #31229  2223    24      2023-06-14      AttributeError("'NoneType' object has no attribute 'account'")
-489     #31229  321     1       2023-06-14      TimeoutError()
-487     #31184  184     1       2023-06-13      <NodeCrash docker-rp-16: ERROR 2023-06-13 15:22:08,202 [shard 1] asser
-484     #31103  185     1       2023-06-12      <NodeCrash docker-rp-13: ERROR 2023-06-12 17:28:55,404 [shard 0] asser
+| failure id |  build |   freq | total | first occ. | test                                                                             | title                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ---------- | ------ | ------ | ----- | ---------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|        506 | 31,863 |     58 |     1 | 2023-06-23 | SIPartitionMovementTest.test_shadow_indexing                                     | <BadLogLines nodes=docker-rp-19(1) example=ERROR 2023-06-23 18:12:05                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+|        505 | 31,849 |     58 |     1 | 2023-06-23 | SIPartitionMovementTest.test_cross_shard                                         | <BadLogLines nodes=docker-rp-23(1) example=ERROR 2023-06-23 15:06:18                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 ...
-202     #23852  326     3       2023-02-23      HTTPError('504 Server Error: Gateway Timeout for url: http://docker-rp
-9       #21947  1652    9       2023-01-27      TimeoutError('Redpanda service docker-rp-10 failed to start within 60
-40      #20893  183     2       2023-01-10      TimeoutError("Consumer failed to consume up to offsets {TopicPartition
+|         40 | 20,893 |    174 |     2 | 2023-01-10 | TestMirrorMakerService.test_simple_end_to_end                                    | TimeoutError(Consumer failed to consume up to offsets {TopicPartition(topic='topic-hzwsqofjgh'                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+|         59 | 19,481 |    701 |     4 | 2022-12-05 | PartitionMovementUpgradeTest.test_basic_upgrade                                  | <BadLogLines nodes=docker-rp-15(1) example=ERROR 2022-12-21 23:18:04                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 ```
 
 Legend
@@ -88,42 +87,38 @@ Sometime a rogue ci build causes a lot of errors which may be ignored (e.g. a re
 
 ```
 # list failures which keep happening after an issue is closed
-python3 view_issues.py --type reopen
+python3 view_issues.py --type reopen | csvcut -c "failure id","issue id","freq","total","last occ.","test","title" | csvlook | less -S
 ```
 
 Output
 
 ```
-f-id    issue   freq    total   last occ.       title
-311     #10087  1027    10      2023-05-02      CI Failure (connection refused to admin API) in `EndToEndShadowIndexin
-240     #7418   2938    32      2023-05-31      CI Failure (partitions_rebalanced times out) in `ScalingUpTest`.`test_
-238     #9459   370     2       2023-06-14      CI Failure target_offset <= _insync_offset in `PartitionBalancerTest.t
+| failure id | issue id |  freq | total |  last occ. | test                                                                    | title                                                                                                                                                                                                                   |
+| ---------- | -------- | ----- | ----- | ---------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|        309 |   10,087 |   973 |    10 | 2023-05-02 | EndToEndShadowIndexingTestWithDisruptions.test_write_with_node_failures | CI Failure (connection refused to admin API) in `EndToEndShadowIndexingTestWithDisruptions`.`test_write_with_node_failures`                                                                                             |
+|        238 |    7,418 | 2,799 |    32 | 2023-05-31 | ScalingUpTest.test_adding_nodes_to_cluster                              | CI Failure (partitions_rebalanced times out) in `ScalingUpTest`.`test_adding_nodes_to_cluster`                                                                                                                          |
 ...
-57      #8919   1146    21      2023-06-14      CI Failure (Assertion `_state && !_state->available()' failed) in `Ran
-33      #8220   1101    6       2023-05-04      Disk usage ratio check failing in `PartitionBalancerTest`.`test_full_n
-1       #8421   1285    7       2023-06-02      CI Failure (heap-use-after-free) in `AvailabilityTests.test_availabili
+|         33 |    8,220 | 1,049 |     6 | 2023-05-04 | PartitionBalancerTest.test_full_nodes                                   | Disk usage ratio check failing in `PartitionBalancerTest`.`test_full_nodes`                                                                                                                                             |
+|          1 |    8,421 | 1,224 |     7 | 2023-06-02 | AvailabilityTests.test_availability_when_one_node_failed                | CI Failure (heap-use-after-free) in `AvailabilityTests.test_availability_when_one_node_failed`                                                                                                                          |
+
 ```
 
 ### Top failing issues
 
 ```
-python3 view_issues.py --type top
+python3 view_issues.py --type top | csvcut -c "failure id","issue id","freq","total","last occ.","test","title" | csvlook | less -S
 ```
 
 Output
 
 ```
-f-id    issue   freq    total   last occ.       title
-464     #11306  191588  41      2023-06-14      CI Failure (Consumed from an unexpected) in `SimpleEndToEndTest.test_c
-429     #11044  56807   121     2023-06-15      CI Failure (Timeout - Failed to start) in `MultiTopicAutomaticLeadersh
-362     #10849  47368   45      2023-05-18      CI Failure (timeout waiting for `rpk cluster` to list 1 topic) in `Sha
-448     #11151  22666   17      2023-06-02      CI Failure (TimeoutError) in `CloudStorageChunkReadTest.test_read_when
-224     #10873  16984   49      2023-05-21      CI Failure (Reported cloud storage usage did not match the manifest in
+| failure id | issue id |   freq | total |  last occ. | test                                                                             | title                                                                                                                                               |
+| ---------- | -------- | ------ | ----- | ---------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+|        360 |   10,849 | 37,406 |    45 | 2023-05-18 | ShadowIndexingManyPartitionsTest.test_many_partitions_recovery                   | CI Failure (timeout waiting for `rpk cluster` to list 1 topic) in `ShadowIndexingManyPartitionsTest.test_many_partitions_recovery`                  |
+|        446 |   11,151 | 16,949 |    17 | 2023-06-02 | CloudStorageChunkReadTest.test_read_when_segment_size_smaller_than_chunk_size    | CI Failure (TimeoutError) in `CloudStorageChunkReadTest.test_read_when_segment_size_smaller_than_chunk_size`                                        |
 ...
-329     #10368  51      1       2023-04-22      CI Failure (topic does not exist while deleting topic) in `ShadowIndex
-412     #10935  45      1       2023-05-19      CI Failure (Internal Server Error) in `PartitionBalancerTest.test_deco
-428     #11410  42      1       2023-05-25      CI Failure (consumers haven't finished) in `CompactionE2EIdempotencyTe
-482     #11371  9       1       2023-06-12      CI Failure (Redpanda failed to stop in 30 seconds) in `PartitionMoveIn
+|        410 |   10,935 |     43 |     1 | 2023-05-19 | PartitionBalancerTest.test_decommission                                          | CI Failure (Internal Server Error) in `PartitionBalancerTest.test_decommission`                                                                     |
+|        426 |   11,410 |     39 |     1 | 2023-05-25 | CompactionE2EIdempotencyTest.test_basic_compaction                               | CI Failure (consumers haven't finished) in `CompactionE2EIdempotencyTest.test_basic_compaction`                                                     |
 ```
 
 ### First occurrence of a failure
@@ -131,35 +126,34 @@ f-id    issue   freq    total   last occ.       title
 The command is usefull to chase a PR causing the problem.
 
 ```
-python3 view_issues.py --type first
+python3 view_issues.py --type first | csvcut -c "failure id","issue id","freq","total","first occ.","test","title" | csvlook | less -S
 ```
 
 ```
-f-id    issue   freq    total   first occ.      title
-486     #11151  1362    1       2023-06-13      CI Failure (TimeoutError) in `CloudStorageChunkReadTest.test_read_when
-485     #11365  666     5       2023-06-12      CI Failure (Timeout waiting for partitions to move) in `NodesDecommiss
-482     #11371  9       1       2023-06-12      CI Failure (Redpanda failed to stop in 30 seconds) in `PartitionMoveIn
+| failure id | issue id |   freq | total | first occ. | test                                                                             | title                                                                                                                                               |
+| ---------- | -------- | ------ | ----- | ---------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+|        499 |   11,592 |    182 |     1 | 2023-06-21 | SchemaRegistryTest.test_restarts                                                 | CI Failure (Storage usage inconsistency) in `SchemaRegistryTest.schema_registry_test`                                                               |
+|        498 |   11,449 |    997 |     1 | 2023-06-21 | CloudStorageChunkReadTest.test_read_when_cache_smaller_than_segment_size         | CI Failure (KgoVerifier failed waiting for worker) in `CloudStorageChunkReadTest.test_read_when_cache_smaller_than_segment_size`                    |
 ...
-60      #10218  739     4       2022-12-21      CI Failure (ignored exceptional future) in `PartitionBalancerTest.test
-80      #10024  2205    24      2022-12-14      CI Failure (TimeoutError in wait_for_partitions_rebalanced) in `Scalin
-78      #11062  551     6       2022-12-13      CI Failure (startup failure) in `ScalingUpTest.test_adding_multiple_no
+|         78 |   11,062 |    875 |    10 | 2022-12-13 | ScalingUpTest.test_adding_multiple_nodes_to_the_cluster                          | CI Failure (startup failure) in `ScalingUpTest.test_adding_multiple_nodes_to_the_cluster`                                                           |
+|         42 |    8,217 |  7,990 |    91 | 2022-12-03 | ControllerEraseTest.test_erase_controller_log                                    | CI Failure (search victim assert) in `ControllerEraseTest.test_erase_controller_log`                                                                |
 ```
 
 ### Last occurrence of a failure
 
 ```
-python3 view_issues.py --type recent
+python3 view_issues.py --type recent | csvcut -c "failure id","issue id","freq","total","last occ.","test","title" | csvlook | less -S
 ```
 
 ```
-f-id    issue   freq    total   last occ.       title
-485     #11365  925     7       2023-06-15      CI Failure (Timeout waiting for partitions to move) in `NodesDecommiss
-429     #11044  61167   132     2023-06-15      CI Failure (Timeout - Failed to start) in `MultiTopicAutomaticLeadersh
-490     #11456  2489    27      2023-06-15      CI Failure (`AttributeError: 'NoneType' object has no attribute 'accou
+| failure id | issue id |   freq | total |  last occ. | test                                                                             | title                                                                                                                                               |
+| ---------- | -------- | ------ | ----- | ---------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+|         78 |   11,062 |    875 |    10 | 2023-06-23 | ScalingUpTest.test_adding_multiple_nodes_to_the_cluster                          | CI Failure (startup failure) in `ScalingUpTest.test_adding_multiple_nodes_to_the_cluster`                                                           |
+|        161 |    8,688 |  1,263 |     7 | 2023-06-23 | ControllerUpgradeTest.test_updating_cluster_when_executing_operations            | CI Failure (Consumer failed to consume up to offsets) in `ControllerUpgradeTest.test_updating_cluster_when_executing_operations`                    |
 ...
-305     #10363  628     3       2023-05-04      CI Failure (assertion error: groups not reported after migration) in `
-60      #10218  735     4       2023-05-04      CI Failure (ignored exceptional future) in `PartitionBalancerTest.test
-329     #10368  51      1       2023-04-22      CI Failure (topic does not exist while deleting topic) in `ShadowIndex
+|        303 |   10,363 |    597 |     3 | 2023-05-04 | ConsumerOffsetsRecoveryToolTest.test_consumer_offsets_partition_count_change     | CI Failure (assertion error: groups not reported after migration) in `ConsumerOffsetsRecoveryToolTest.test_consumer_offsets_partition_count_change` |
+|        221 |    9,751 |    194 |     4 | 2023-04-05 | EndToEndTopicRecovery.test_restore                                               | CI Failure (timeout + UNKNOWN_TOPIC_OR_PARTITION) in `EndToEndTopicRecovery.test_restore`                                                           |
+
 ```
 
 ### Stale issues
@@ -167,12 +161,10 @@ f-id    issue   freq    total   last occ.       title
 A failure associated with the issues hasn't failed within two months
 
 ```
-python3 view_issues.py --type stale
+python3 view_issues.py --type stale | csvcut -c "failure id","issue id","freq","total","last occ.","test","title" | csvlook | less -S
 ```
 
 ```
-f-id    issue   freq    total   last occ.       title
-15      #8496   933     4       2023-04-12      CI Failure (_topic_remote_deleted timeout) in `TopicDeleteCloudStorage
-223     #9751   204     4       2023-04-05      CI Failure (timeout + UNKNOWN_TOPIC_OR_PARTITION) in `EndToEndTopicRec
-4       #8457   206     5       2023-03-07      CI Failure (Timeout on manifest_has_one_segment) in `AdjacentSegmentMe
+| failure id | issue id | freq | total | last occ. | test | title |
+| ---------- | -------- | ---- | ----- | --------- | ---- | ----- |
 ```
