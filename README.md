@@ -45,8 +45,8 @@ and gh issues locally from scratch. The follow up will fetch only delta.
 python3 index.py
 ```
 
-When you already used the tool and pull new version you should either `rm -rf data` or use `python3 index.py --reindex`.
-The latter is faster because it doesn't download the test db again and only reprocess it.
+When you already used the tool and pull new version you should execute `python3 index.py --reindex` once. If
+it fails then wipe the whole state out `rm -rf data` and start from scratch `python3 index.py`.
 
 ### New failures
 
