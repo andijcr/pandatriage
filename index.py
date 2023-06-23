@@ -575,7 +575,6 @@ def analyze():
                 f.write(c)
 
             entry["link_id"] = int(re.match(".+/([0-9]+)$", first_fail(failure)["link"]).group(1))
-            entry["test_id"] = failure["test_id"]
             collection = noci
         else:
             issue = active_issue(failure)
@@ -587,6 +586,7 @@ def analyze():
             collection = active
             
         collection.append(entry | {
+            "test_id": failure["test_id"],
             "name": failure["name"],
             "fails": len(failure["fails"]),
             "passes": failure["test"]["passes"],
