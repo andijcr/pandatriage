@@ -527,7 +527,7 @@ def analyze():
         collection = None
 
         entry = {
-            "title": failure["fails"][0]["title"].replace("\r", "").split("\n")[0][0:70],
+            "title": failure["fails"][0]["title"].replace("\r", "").split("\n")[0],
             "freq": int(1000000 * len(failure["fails"]) / (len(failure["fails"]) + failure["test"]["passes"]))
         }
 
@@ -535,7 +535,7 @@ def analyze():
             issue = active_issue(failure)
             entry = {
                 "issue": issue["number"],
-                "title": issue["title"][0:70],
+                "title": issue["title"],
                 "freq": int(1000000 * len(failure["fails"]) / (len(failure["fails"]) + failure["test"]["passes"]))
             }
             collection = stale_issues
@@ -547,7 +547,7 @@ def analyze():
             issue = last_issue(failure)
             entry = {
                 "issue": issue["number"],
-                "title": issue["title"][0:70],
+                "title": issue["title"],
                 "freq": int(1000000 * len(failure["fails"]) / (len(failure["fails"]) + failure["test"]["passes"]))
             }
             collection = reopen
@@ -581,7 +581,7 @@ def analyze():
             issue = active_issue(failure)
             entry = {
                 "issue": issue["number"],
-                "title": issue["title"][0:70],
+                "title": issue["title"],
                 "freq": int(1000000 * len(failure["fails"]) / (len(failure["fails"]) + failure["test"]["passes"]))
             }
             collection = active
