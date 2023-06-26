@@ -86,7 +86,7 @@ def main():
     fetch_ci_issues()
     process_ci_runs(args.reindex)
     process_ci_issues()
-    process_test_failures()
+    process_failures()
     analyze()
 
 def load_json(name):
@@ -386,13 +386,24 @@ def process_ci_issues():
             lean["createdAt"] = timestamp(issue["createdAt"])
             lean["updatedAt"] = timestamp(issue["updatedAt"])
             lean["labels"] = list(map(lambda x: x["name"], issue["labels"]))
+            lean["opt"] = None
             for content in content_gen(issue):
+                if lean["opt"] == None:
+                    for opt_json in re.findall("```([^(```)]+)```", content, re.MULTILINE):
+                        try:
+                            lean["opt"] = json.loads(opt_json)
+                            break
+                        except json.decoder.JSONDecodeError:
+                            continue
+
                 # for now we don't require a fragment, since issues created by this tool lack them, 
                 # regex for fragment was:
                 # #[0-9a-z]{8}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{12}
                 for x in re.findall("(https://buildkite.com/redpanda/redpanda/builds/\d+)", content):
                     if x not in lean["builds"]:
                         lean["builds"].append(x)
+            if lean["opt"] == None:
+                lean["opt"] = dict()
             skinny.append(lean)
         else:
             if issue["state"] == "OPEN":
@@ -421,7 +432,7 @@ def process_ci_issues():
     save_json("data/conflicting-open-issues", open_conflicts)
     save_json("data/issues", skinny)
 
-def process_test_failures():
+def process_failures():
     issues = defaultdict(lambda: [])
 
     for issue in load_json("data/issues"):
@@ -448,19 +459,25 @@ def process_test_failures():
                         "number": issue["number"],
                         "link": fail["link"],
                         "labels": issue["labels"],
+                        "opt": issue["opt"],
                     })
         failure["issues"] = tickets
         save_json(f"data/failures/{id}", failure)
 
 def analyze():
+    def is_closed(failure):
+        if len(failure["issues"]) == 0:
+            return False
+        if not all(map(lambda x: x["state"]=="CLOSED", failure["issues"])):
+            return False
+        return True
+    
     def is_resolved(failure, precision_s = 2*24*60*60):
         # a failure is resolved if it:
         #  - has an least one assosiated issue
         #  - all issues are closed
         #  - no occurence after an issue is closed (with precision_s)
-        if len(failure["issues"]) == 0:
-            return False
-        if not all(map(lambda x: x["state"]=="CLOSED", failure["issues"])):
+        if not is_closed(failure):
             return False
         occurence = max(map(lambda x: x["ts"], failure["fails"]))
         closed = max(map(lambda x: x["updatedAt"], failure["issues"]))
@@ -512,7 +529,62 @@ def analyze():
     def first_fail(failure):
         return sorted(failure["fails"], key=lambda x: x["ts"])[0]
     
+    issues = dict()
+    for issue in load_json("data/issues"):
+        issues[issue["number"]] = issue
+    
+    def get_duplicate(failure):
+        result = None
+        duplicatee = None
+        for issue in failure["issues"]:
+            if "duplicate" in issue['opt']:
+                m = re.match("^https://github.com/redpanda-data/redpanda/issues/(\d+)$", issue["opt"]["duplicate"])
+                if not m:
+                    raise Exception(f"can't load issue #{issue['number']}: {issue['opt']['duplicate']} isn't a link to an issue")
+                iid = int(m.group(1))
+                assert result == None or result == iid, f"a failure can't be a duplicate of diff issues: {result} & {iid}"
+                result = iid
+                duplicatee = issue
+        if not is_closed(failure):
+            assert result == None
+        return result, duplicatee["number"] if duplicatee != None else None
+    
+    failures = {}
+    fid_by_test = defaultdict(lambda: [])
     manifest = load_json("data/failures/manifest")
+    for id in manifest["failures"]:
+        failure = load_json(f"data/failures/{id}")
+        failures[id] = failure
+        fid_by_test[failure["test_id"]].append(id)
+
+    def get_root(failure):
+        number, duplicatee = get_duplicate(failure)
+        if number == None:
+            failure["duplicated"] = False
+            return failure
+        failure["duplicated"] = True
+        failure["double"] = duplicatee
+        assert number in issues, f"can't find duplicate #{number}"
+        test_id = f"{issues[number]['class']}.{issues[number]['method']}"
+        assert test_id in fid_by_test, f"can't find test_id: {test_id}"
+        fd = None
+        for fid in fid_by_test[test_id]:
+            failure2 = failures[fid]
+            for issue in failure2["issues"]:
+                if issue["number"] == number:
+                    if fd != None:
+                        assert False, f"found fid:{failure2['id']} by #{number} of fid:{failure['id']} conflicting with fid={fd['id']}"
+                    fd = failure2
+        assert fd != None, f"can't find failure by #{number} of fid:{failure['id']}"
+        return get_root(fd)
+    
+    for id in failures:
+        failure = failures[id]
+        root = get_root(failure)
+        if failure != root:
+            if "duplicates" not in root:
+                root["duplicates"] = [ root ]
+            root["duplicates"].append(failure)
 
     resolved = []
     reopen = []
@@ -521,14 +593,51 @@ def analyze():
     stale_issues = []
     stale_failures = []
 
-    for id in manifest["failures"]:
-        failure = load_json(f"data/failures/{id}")
+    for id in failures:
+        failure = failures[id]
+
+        if failure["duplicated"]:
+            continue
 
         collection = None
 
+        freq = int(1000000 * len(failure["fails"]) / (len(failure["fails"]) + failure["test"]["passes"]))
+        fails = len(failure["fails"])
+        first = min(map(lambda x: x["ts"], failure["fails"]))
+        last = max(map(lambda x: x["ts"], failure["fails"]))
+
+        sub = []
+        if "duplicates" in failure:
+            x = 1
+            failed_builds = set()
+            for f in failure["duplicates"]:
+                if f != failure:
+                    iid = f["double"]
+                else:
+                    iid = active_issue(failure)["number"]
+                
+                sub.append({
+                    "freq": int(1000000 * len(f["fails"]) / (len(f["fails"]) + f["test"]["passes"])),
+                    "name": f["name"],
+                    "issue": iid,
+                    "fails": len(f["fails"]),
+                    "first": min(map(lambda x: x["ts"], f["fails"])),
+                    "last": min(map(lambda x: x["ts"], f["fails"])),
+                    "test_id": f["test_id"],
+                    "title": issues[iid]["title"]
+                })
+                
+                x = x * (1 - len(f["fails"]) / (len(f["fails"]) + f["test"]["passes"]))
+                for fail in f["fails"]:
+                    first = min(first, fail["ts"])
+                    last = max(last, fail["ts"])
+                    failed_builds.add(fail["id"])
+            freq = int(1000000 * (1 - x))
+            fails = len(failed_builds)
+
         entry = {
             "title": failure["fails"][0]["title"].replace("\r", "").split("\n")[0],
-            "freq": int(1000000 * len(failure["fails"]) / (len(failure["fails"]) + failure["test"]["passes"]))
+            "freq": freq
         }
 
         if is_stale_issue(failure):
@@ -536,7 +645,7 @@ def analyze():
             entry = {
                 "issue": issue["number"],
                 "title": issue["title"],
-                "freq": int(1000000 * len(failure["fails"]) / (len(failure["fails"]) + failure["test"]["passes"]))
+                "freq": freq
             }
             collection = stale_issues
         elif is_stale_failure(failure):
@@ -548,7 +657,7 @@ def analyze():
             entry = {
                 "issue": issue["number"],
                 "title": issue["title"],
-                "freq": int(1000000 * len(failure["fails"]) / (len(failure["fails"]) + failure["test"]["passes"]))
+                "freq": freq
             }
             collection = reopen
         elif should_open(failure):
@@ -581,18 +690,22 @@ def analyze():
             entry = {
                 "issue": issue["number"],
                 "title": issue["title"],
-                "freq": int(1000000 * len(failure["fails"]) / (len(failure["fails"]) + failure["test"]["passes"]))
+                "freq": freq
             }
             collection = active
+        
+        if "duplicates" in failure:
+            entry["title"] = "* " + entry["title"]
             
         collection.append(entry | {
             "test_id": failure["test_id"],
             "name": failure["name"],
-            "fails": len(failure["fails"]),
+            "fails": fails,
             "passes": failure["test"]["passes"],
             "runs": failure["test"]["runs"],
-            "first": min(map(lambda x: x["ts"], failure["fails"])),
-            "last": max(map(lambda x: x["ts"], failure["fails"]))
+            "first": first,
+            "last": last,
+            "sub": sub
         })
 
     save_json("data/analysis", {

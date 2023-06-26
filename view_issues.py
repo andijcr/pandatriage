@@ -33,3 +33,8 @@ for item in issues:
     day = datetime.fromtimestamp(item["first" if args.type == "first" else "last"]).strftime("%Y-%m-%d")
     line = f"{item['name']},{item['issue']},{item['freq']},{item['fails']},{day},{item['test_id']},\"{item['title']}\""
     print(line)
+    
+    for x in item["sub"]:
+        day = datetime.fromtimestamp(x["first" if args.type == "first" else "last"]).strftime("%Y-%m-%d")
+        line = f"{item['name']}/{x['name']},{x['issue']},{x['freq']},{x['fails']},{day},{x['test_id']},\"{x['title']}\""
+        print(line)

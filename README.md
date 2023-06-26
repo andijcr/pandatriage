@@ -48,7 +48,29 @@ python3 index.py
 When you already used the tool and pull new version you should execute `python3 index.py --reindex` once. If
 it fails then wipe the whole state out `rm -rf data` and start from scratch `python3 index.py`.
 
-### New failures
+### Duplicates
+
+The tool expects that each failure (a set of test fails with same test name and stacktrace) has an associated
+ci-issue. Sometimes different tests may fail for the same reasons so when we're sure about it we may mark
+one issue as a duplicate of another.
+
+If an issue #xxx fails for the same reason as #yyy then we may mark #xxx as duplicate by closing and adding
+a comment to it (don't forget, it's a code markdown block which includes tripple 0x60 chars):
+
+```
+{
+    "duplicate": "https://github.com/redpanda-data/redpanda/issues/yyy"
+}
+```
+
+### Rogue failing build
+
+Sometime a rogue ci build causes a lot of errors which should be ignored (e.g. a responsible PR is identified and
+rolled back). In this case edit `.ciignore.json` to exclude that build and restart `python3 index.py --reindex`.
+
+### Commands
+
+#### New failures
 
 ```
 # list failures which doesn't have corresponding issues
@@ -77,11 +99,9 @@ build      - buildkite's build, check https://buildkite.com/redpanda/redpanda/bu
 freq       - frequency of the fails (number of failures per 1MM)
 total      - total number of fails
 first occ. - first occurrence of the failure
-title      - failure's title (to ignore: python3 view_new.py --notitle)
-test       - failing test (to include: python3 view_new.py --test)
+title      - failure's title
+test       - failing test
 ```
-
-Sometime a rogue ci build causes a lot of errors which may be ignored (e.g. a responsible PR is identified and rolled back). In this case edit `.ciignore.json` to exclude that build, reset `last-processed-id` to `-1` in `data/builds/manifest.json` and restart `index.py`.
 
 ### Come back of old resolved issues
 
@@ -103,7 +123,7 @@ Output
 
 ```
 
-### Top failing issues
+#### Top failing issues
 
 ```
 python3 view_issues.py --type top | csvcut -c "failure id","issue id","freq","total","last occ.","test","title" | csvlook | less -S
@@ -121,7 +141,7 @@ Output
 |        426 |   11,410 |     39 |     1 | 2023-05-25 | CompactionE2EIdempotencyTest.test_basic_compaction                               | CI Failure (consumers haven't finished) in `CompactionE2EIdempotencyTest.test_basic_compaction`                                                     |
 ```
 
-### First occurrence of a failure
+#### First occurrence of a failure
 
 The command is usefull to chase a PR causing the problem.
 
@@ -139,7 +159,7 @@ python3 view_issues.py --type first | csvcut -c "failure id","issue id","freq","
 |         42 |    8,217 |  7,990 |    91 | 2022-12-03 | ControllerEraseTest.test_erase_controller_log                                    | CI Failure (search victim assert) in `ControllerEraseTest.test_erase_controller_log`                                                                |
 ```
 
-### Last occurrence of a failure
+#### Last occurrence of a failure
 
 ```
 python3 view_issues.py --type recent | csvcut -c "failure id","issue id","freq","total","last occ.","test","title" | csvlook | less -S
@@ -156,7 +176,7 @@ python3 view_issues.py --type recent | csvcut -c "failure id","issue id","freq",
 
 ```
 
-### Stale issues
+#### Stale issues
 
 A failure associated with the issues hasn't failed within two months
 
