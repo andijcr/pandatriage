@@ -1,61 +1,50 @@
 ## Configuration
 
-Set CI DB credentials (environment variables):
+Configure the CI database credentials (environment variables):
 
 * `CI_DB_HOST`
 * `CI_DB_USER`
 * `CI_DB_PWD`
 
-Search for "Redpanda Test Results DB" on wiki
+Refer to the wiki for information on "Redpanda Test Results DB."
 
 ### Dependencies
 
-Install [gh](https://cli.github.com/) CLI binary.
+Install [gh](https://cli.github.com/) CLI for GitHub and execute it to set up its credentials.
 
-Then choose venv or global install for python modules, with venv recommended.
+Next, choose between a virtual environment (`venv`) or a global installation for Python modules, with `venv` recommended.
 
-#### venv
+#### Virtual Environment (venv)
 
 Using `venv` is the easiest way to set up the dependencies independently of the rest of your system.
 
-One time setup (should show `venv setup OK` as the last line of output):
+Perform a one-time setup (the last line of output should indicate `venv setup OK`):
 
 ```bash
 python3 -m venv venv && source venv/bin/activate && pip3 install -r requirements.txt && echo "venv setup OK"
 ```
 
-When you return to use the tool in a new tty, you need to activate the venv:
+When you return to use `pandatriage` in a new terminal, you need to activate the virtual environment:
 
 ```bash
 source venv/bin/activate
 ```
 
-#### Global install
+#### Global Installation
 
 * `pip3 install -r requirements.txt`
 
-Use gh to set its credentials
-
 ## Usage
 
-Correlate issues with failures. The first run takes ~30 mins because it downloads Redpanda Test Results DB
-and gh issues locally from scratch. The follow up will fetch only delta.
+Execute `python3 index.py` to download "Redpanda Test Results DB" & ci-issues, group test failures by a pair of test name and its stacktrace parts, correlate issues with failures using ci links. The first run takes approximately 30 minutes as it downloads full data. Subsequent runs will only fetch the delta.
 
-```
-python3 index.py
-```
-
-When you already used the tool and pull new version you should execute `python3 index.py --reindex` once. If
-it fails then wipe the whole state out `rm -rf data` and start from scratch `python3 index.py`.
+To reset index's state execute `rm -rf data` and then start from scratch with `python3 index.py`.
 
 ### Duplicates
 
-The tool expects that each failure (a set of test fails with same test name and stacktrace) has an associated
-ci-issue. Sometimes different tests may fail for the same reasons so when we're sure about it we may mark
-one issue as a duplicate of another.
+`pandatriage` expects that each failure (a set of test failures with the same test name and stack trace) has an associated CI issue. Sometimes, different tests may fail for the same reason. In such cases, we can mark one issue as a duplicate of another.
 
-If an issue #xxx fails for the same reason as #yyy then we may mark #xxx as duplicate by closing and adding
-a comment to it (don't forget, it's a code markdown block which includes tripple 0x60 chars):
+To mark issue #xxx as a duplicate of #yyy, close issue #xxx and add a comment (remember to use a code markdown block with triple backticks):
 
 ```
 {
@@ -63,23 +52,26 @@ a comment to it (don't forget, it's a code markdown block which includes tripple
 }
 ```
 
-### Rogue failing build
+### Bad Build
 
-Sometime a rogue ci build causes a lot of errors which should be ignored (e.g. a responsible PR is identified and
-rolled back). In this case edit `.ciignore.json` to exclude that build and restart `python3 index.py --reindex`.
+Sometimes, a transient change in the environment, such as misconfiguration or accidental merging of a wrong branch, can cause multiple tests to fail. Instead of opening an issue for each failed test, we can ignore a build that causes numerous errors (e.g., when a responsible pull request is identified and rolled back). In such cases, edit `.ciignore.json` to exclude that build and restart `python3 index.py --reindex`.
+
+### Misformatted Issues
+
+The directory `data/misformatted-open-issues` contains misformatted open issues marked with `ci-failure`. If a `ci-failure` pertains to a unit test (ducktape's ci-issue format is not applicable), add the `rpunit` label to ignore it. If an issue should be ignored for any other reason, add the `ci-ignore` label.
 
 ### Commands
 
-#### New failures
+#### New Failures
 
 ```
-# list failures which doesn't have corresponding issues
+# List failures that do not have corresponding issues
 python3 view_new.py | csvcut -c "failure id","build","freq","total","first occ.","test","title" | csvlook -I -q '"' -d "," | less -S
 ```
 
-By tuning the csvcut's args you may control which columns to display.
+The `csvkit` package (with `csvcut` and `csvlook` commands) is used to select columns from the output of `view_new.py` (which is in CSV format) and display them in a formatted manner.
 
-Output
+Output:
 
 ```
 | failure id |  build |   freq | total | first occ. | test                                                                             | title                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
@@ -91,26 +83,27 @@ Output
 |         59 |  19481 |    701 |     4 | 2022-12-05 | PartitionMovementUpgradeTest.test_basic_upgrade                                  | <BadLogLines nodes=docker-rp-15(1) example=ERROR 2022-12-21 23:18:04                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 ```
 
-Legend
+Legend:
 
 ```
-f-id       - id of a failure, check `failures/491.json`
-build      - buildkite's build, check https://buildkite.com/redpanda/redpanda/builds/31233
-freq       - frequency of the fails (number of failures per 1MM)
-total      - total number of fails
-first occ. - first occurrence of the failure
-title      - failure's title
-test       - failing test
+failure id  - ID of the failure (check `failures/491.json`)
+build       - Buildkite's build (check [buildkite.com/redpanda/redpanda/builds/31233](https://buildkite.com/redpanda/redpanda/builds/31233))
+freq        - Frequency of the failures (number of failures per 1 million)
+total       - Total number of failures
+first occ.  - First occurrence of the failure
+title       - Title of the failure
+test        - Failing test
 ```
 
-### Come back of old resolved issues
+#### New Occurrences of Closed Issues
+
+List failures that keep happening after an issue is closed.
 
 ```
-# list failures which keep happening after an issue is closed
 python3 view_issues.py --type reopen | csvcut -c "failure id","issue id","freq","total","last occ.","test","title" | csvlook -I | less -S
 ```
 
-Output
+Output:
 
 ```
 | failure id | issue id |  freq | total |  last occ. | test                                                                    | title                                                                                                                                                                                                                   |
@@ -120,16 +113,15 @@ Output
 ...
 |         33 |     8220 |  1049 |     6 | 2023-05-04 | PartitionBalancerTest.test_full_nodes                                   | Disk usage ratio check failing in `PartitionBalancerTest`.`test_full_nodes`                                                                                                                                             |
 |          1 |     8421 |  1224 |     7 | 2023-06-02 | AvailabilityTests.test_availability_when_one_node_failed                | CI Failure (heap-use-after-free) in `AvailabilityTests.test_availability_when_one_node_failed`                                                                                                                          |
-
 ```
 
-#### Top failing issues
+#### Top Failing Issues
 
 ```
 python3 view_issues.py --type top | csvcut -c "failure id","issue id","freq","total","last occ.","test","title" | csvlook -I | less -S
 ```
 
-Output
+Output:
 
 ```
 | failure id | issue id |   freq | total |  last occ. | test                                                                             | title                                                                                                                                               |
@@ -141,13 +133,15 @@ Output
 |        426 |    11410 |     39 |     1 | 2023-05-25 | CompactionE2EIdempotencyTest.test_basic_compaction                               | CI Failure (consumers haven't finished) in `CompactionE2EIdempotencyTest.test_basic_compaction`                                                     |
 ```
 
-#### First occurrence of a failure
+#### First Occurrence of a Failure
 
-The command is usefull to chase a PR causing the problem.
+This command is useful to chase a PR causing the problem.
 
 ```
 python3 view_issues.py --type first | csvcut -c "failure id","issue id","freq","total","first occ.","test","title" | csvlook -I | less -S
 ```
+
+Output:
 
 ```
 | failure id | issue id |   freq | total | first occ. | test                                                                             | title                                                                                                                                               |
@@ -159,11 +153,15 @@ python3 view_issues.py --type first | csvcut -c "failure id","issue id","freq","
 |         42 |     8217 |   7990 |    91 | 2022-12-03 | ControllerEraseTest.test_erase_controller_log                                    | CI Failure (search victim assert) in `ControllerEraseTest.test_erase_controller_log`                                                                |
 ```
 
-#### Last occurrence of a failure
+These results show the first occurrence of each failure, along with the associated issue and test information.
+
+#### Last Occurrence of a Failure
 
 ```
 python3 view_issues.py --type recent | csvcut -c "failure id","issue id","freq","total","last occ.","test","title" | csvlook -I | less -S
 ```
+
+Output:
 
 ```
 | failure id | issue id |   freq | total |  last occ. | test                                                                             | title                                                                                                                                               |
@@ -173,16 +171,17 @@ python3 view_issues.py --type recent | csvcut -c "failure id","issue id","freq",
 ...
 |        303 |    10363 |    597 |     3 | 2023-05-04 | ConsumerOffsetsRecoveryToolTest.test_consumer_offsets_partition_count_change     | CI Failure (assertion error: groups not reported after migration) in `ConsumerOffsetsRecoveryToolTest.test_consumer_offsets_partition_count_change` |
 |        221 |     9751 |    194 |     4 | 2023-04-05 | EndToEndTopicRecovery.test_restore                                               | CI Failure (timeout + UNKNOWN_TOPIC_OR_PARTITION) in `EndToEndTopicRecovery.test_restore`                                                           |
-
 ```
 
-#### Stale issues
+#### Stale Issues
 
-A failure associated with the issues hasn't failed within two months
+A failure associated with the issues hasn't occurred within two months.
 
 ```
 python3 view_issues.py --type stale | csvcut -c "failure id","issue id","freq","total","last occ.","test","title" | csvlook -I | less -S
 ```
+
+Output:
 
 ```
 | failure id | issue id | freq | total | last occ. | test | title |
