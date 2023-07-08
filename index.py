@@ -22,7 +22,7 @@ user = getenv("CI_DB_USER")
 password = getenv("CI_DB_PWD")
 
 
-re_build_arch = re.compile("summary-ducktape-build-([a-z]+)-clang-([a-z0-9]+)-0")
+re_build_arch = re.compile("summary-ducktape-build-([a-z]+)-clang-([a-z0-9]+)-(0|1)")
 
 ignored_stacktrace_prefixes = [
     [
@@ -138,7 +138,7 @@ def fetch_ci_runs():
             if record[2] != "cdt":
                 m = re_build_arch.match(record[2])
                 if not m:
-                    assert False
+                    assert False, f"{record[0]} {record[2]}"
                 build = m.group(1)
                 arch = m.group(2)
                 type = "pr-merged"
@@ -155,11 +155,16 @@ def fetch_ci_runs():
                 "meta": record[4]
             }
 
-            manifest["builds"].append(record[0])
             manifest["last-fetched-id"] = record[0]
 
+            is_redpanda_build = build["meta"]["buildkite_env_vars"]["BUILDKITE_BUILD_URL"].startswith("https://buildkite.com/redpanda/redpanda/builds/")
+            is_dev_build = build["meta"]["buildkite_env_vars"]["BUILDKITE_PULL_REQUEST"] == "false"
+
+            if is_redpanda_build and is_dev_build:
+                manifest["builds"].append(record[0])
+                save_json(f"data/builds/{record[0]}", build)
+
             save_json("data/builds/manifest", manifest)
-            save_json(f"data/builds/{record[0]}", build)
     
         ended = time.time()
         print(f"\tfetched {len(records)} ({fetched} / {count}) in {int(ended - started)}s")
