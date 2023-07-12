@@ -450,13 +450,13 @@ def process_failures():
     for id in manifest["failures"]:
         failure = load_json(f"data/failures/{id}")
         failure["name"] = id
-        tickets = []
+        tickets = dict()
         for fail in failure["fails"]:
-            if len(tickets) > 0:
-                break
             for issue in issues[failure["test_id"]]:
                 if fail["link"] in issue["builds"]:
-                    tickets.append({
+                    if issue["number"] in tickets:
+                        continue
+                    tickets[issue["number"]] = {
                         "state": issue["state"],
                         "title": issue["title"],
                         "createdAt": issue["createdAt"],
@@ -465,8 +465,8 @@ def process_failures():
                         "link": fail["link"],
                         "labels": issue["labels"],
                         "opt": issue["opt"],
-                    })
-        failure["issues"] = tickets
+                    }
+        failure["issues"] = [tickets[number] for number in tickets]
         save_json(f"data/failures/{id}", failure)
 
 def analyze():
