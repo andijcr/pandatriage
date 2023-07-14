@@ -22,7 +22,7 @@ user = getenv("CI_DB_USER")
 password = getenv("CI_DB_PWD")
 
 
-re_build_arch = re.compile("summary-ducktape-build-([a-z]+)-clang-([a-z0-9]+)-(0|1)")
+re_build_arch = re.compile("summary-ducktape-build-([a-z]+)-clang-([a-z0-9]+)-(0|1|2)")
 
 ignored_stacktrace_prefixes = [
     [
@@ -112,7 +112,7 @@ def fetch_ci_runs():
 
     conn = psycopg2.connect(f"host={host} dbname={database} user={user} password={password}")
     cur = conn.cursor()
-    cur.execute(f"SELECT count(*) FROM test_results WHERE id > {manifest['last-fetched-id']} AND name LIKE 'summary-%'")
+    cur.execute(f"SELECT count(*) FROM test_results WHERE id > {manifest['last-fetched-id']} AND (name = 'cdt-aws-nightly-arm64' OR name = 'cdt-aws-nightly-amd64' OR name LIKE 'summary-%')")
     count = cur.fetchone()[0]
     if count > 0:
         print(f"Fetching {count} ci-runs")
@@ -122,7 +122,7 @@ def fetch_ci_runs():
     fetched = 0
     while True:
         started = time.time()
-        cur.execute(f"SELECT id, ts, name, data, meta FROM test_results WHERE id > {manifest['last-fetched-id']} AND name LIKE 'summary-%' ORDER BY id ASC LIMIT 100")
+        cur.execute(f"SELECT id, ts, name, data, meta FROM test_results WHERE id > {manifest['last-fetched-id']} AND (name = 'cdt-aws-nightly-arm64' OR name = 'cdt-aws-nightly-amd64' OR name LIKE 'summary-%') ORDER BY id ASC LIMIT 100")
         records = cur.fetchall()
 
         if len(records) == 0:
@@ -131,11 +131,15 @@ def fetch_ci_runs():
         for record in records:
             fetched += 1
 
-            build = "release"
-            arch = "amd64"
-            type = "cdt"
-
-            if record[2] != "cdt":
+            if record[2] == "cdt-aws-nightly-amd64":
+                build = "release"
+                arch = "amd64"
+                type = "cdt-nightly"
+            elif record[2] == "cdt-aws-nightly-arm64":
+                build = "release"
+                arch = "arm64"
+                type = "cdt-nightly"
+            else:
                 m = re_build_arch.match(record[2])
                 if not m:
                     assert False, f"{record[0]} {record[2]}"
@@ -157,12 +161,16 @@ def fetch_ci_runs():
 
             manifest["last-fetched-id"] = record[0]
 
-            is_redpanda_build = build["meta"]["buildkite_env_vars"]["BUILDKITE_BUILD_URL"].startswith("https://buildkite.com/redpanda/redpanda/builds/")
-            is_dev_build = build["meta"]["buildkite_env_vars"]["BUILDKITE_PULL_REQUEST"] == "false"
+            if "BUILDKITE_BUILD_URL" in build["meta"]["buildkite_env_vars"]:
+                if type == "cdt-nightly":
+                    is_redpanda_build = build["meta"]["buildkite_env_vars"]["BUILDKITE_BUILD_URL"].startswith("https://buildkite.com/redpanda/vtools/builds/")
+                else:
+                    is_redpanda_build = build["meta"]["buildkite_env_vars"]["BUILDKITE_BUILD_URL"].startswith("https://buildkite.com/redpanda/redpanda/builds/")
+                is_dev_build = build["meta"]["buildkite_env_vars"]["BUILDKITE_PULL_REQUEST"] == "false"
 
-            if is_redpanda_build and is_dev_build:
-                manifest["builds"].append(record[0])
-                save_json(f"data/builds/{record[0]}", build)
+                if is_redpanda_build and is_dev_build:
+                    manifest["builds"].append(record[0])
+                    save_json(f"data/builds/{record[0]}", build)
 
             save_json("data/builds/manifest", manifest)
     
