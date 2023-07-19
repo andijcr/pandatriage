@@ -389,7 +389,8 @@ def process_ci_issues():
     for num in manifest["issues"]:
         issue = load_json(f"data/issues/{num}")
         lean = { "number": num }
-        m = re.search("^Class: +([^\r]+)\r\nMethod: +([^\r]+)\r", issue["body"], re.MULTILINE)
+        body = issue["body"].replace("\r", "")
+        m = re.search("^Class: +([^\n]+)\nMethod: +([^\n]+)\n", body, re.MULTILINE)
         if m:
             lean["class"] = m.group(1)
             lean["method"] = m.group(2)
