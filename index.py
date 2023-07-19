@@ -416,6 +416,9 @@ def process_ci_issues():
                 for x in re.findall("(https://buildkite.com/redpanda/redpanda/builds/\d+)", content):
                     if x not in lean["builds"]:
                         lean["builds"].append(x)
+                for x in re.findall("(https://buildkite.com/redpanda/vtools/builds/\d+)", content):
+                    if x not in lean["builds"]:
+                        lean["builds"].append(x)
             if lean["opt"] == None:
                 lean["opt"] = dict()
             skinny.append(lean)
