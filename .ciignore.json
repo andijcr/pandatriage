@@ -18,5 +18,13 @@
     {
         "build": 31251,
         "comment": "https://github.com/redpanda-data/redpanda/pull/11423"
+    },
+    {
+        "build": 31986,
+        "comment": "minio connection issues (test infra rare issue)"
+    },
+    {
+        "build": 31911,
+        "comment": "minio connection issues (test infra rare issue)"
     }
 ]
