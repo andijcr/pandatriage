@@ -26,5 +26,9 @@
     {
         "build": 31911,
         "comment": "minio connection issues (test infra rare issue)"
+    },
+    {
+        "build": 8758,
+        "comment": "github api temp issue"
     }
 ]
